@@ -31,10 +31,11 @@ document.getElementById('convert-btn').addEventListener('click', async () => {
   
         if (phonemes) {
           const firstPhoneme = phonemes.split(' ')[0];
+          const phonemeWithoutNumber = firstPhoneme.replace(/\d+/g, ''); // Remove numbers
           const img = document.createElement('img');
           img.className = 'phoneme-image';
-          img.src = chrome.runtime.getURL(`images/${firstPhoneme}.png`);
-          img.alt = firstPhoneme;
+          img.src = chrome.runtime.getURL(`images/${phonemeWithoutNumber}.png`);
+          img.alt = phonemeWithoutNumber;
           wordDiv.appendChild(img);
         } else {
           const errorSpan = document.createElement('span');

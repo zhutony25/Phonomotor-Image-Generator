@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Pronunciation Helper",
+    "name": "Phonomoter Image Generator",
     "version": "1.0",
     "permissions": ["storage"],
     "action": {
