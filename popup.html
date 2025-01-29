@@ -3,14 +3,22 @@
 <head>
   <style>
     body { width: 300px; padding: 10px; }
-    #output-image { max-width: 100%; margin-top: 10px; }
+    .word-container {
+      display: inline-block;
+      margin: 5px;
+      text-align: center;
+    }
+    .phoneme-image {
+      max-width: 50px;
+      display: block;
+      margin: 3px auto;
+    }
   </style>
 </head>
 <body>
-  <input type="text" id="input-word" placeholder="Enter a word">
+  <input type="text" id="input-word" placeholder="Enter a sentence" style="width: 100%">
   <button id="convert-btn">Convert</button>
-  <div id="phonemes-output"></div>
-  <img id="output-image" alt="Phoneme illustration">
+  <div id="output-container"></div>
   <script src="popup.js"></script>
 </body>
 </html>
