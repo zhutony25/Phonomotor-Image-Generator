@@ -34,7 +34,7 @@ document.getElementById('convert-btn').addEventListener('click', async () => {
           const phonemeWithoutNumber = firstPhoneme.replace(/\d+/g, ''); // Remove numbers
           const img = document.createElement('img');
           img.className = 'phoneme-image';
-          img.src = chrome.runtime.getURL(`images/${phonemeWithoutNumber}.png`);
+          img.src = chrome.runtime.getURL(`phonemes/${phonemeWithoutNumber}.png`);
           img.alt = phonemeWithoutNumber;
           wordDiv.appendChild(img);
         } else {

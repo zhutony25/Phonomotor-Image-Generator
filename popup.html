@@ -19,17 +19,31 @@
       padding: 10px;
     }
 
+    /* Logo container */
+    .logo-container {
+      position: absolute;
+      top: 0px;
+      left: 20px;
+      z-index: 1000; /* Ensure it stays above other elements */
+    }
+
+    .logo-container img {
+      width: 150px; /* Increase size */
+      height: auto; /* Maintain aspect ratio */
+    }
+
     /* Input container to align input and button in a row */
     .input-container {
       display: flex;
       width: 90%;
+      top: 10px;
       max-width: 600px;
       padding: 25px;
     }
 
     /* Input bar styling */
     #input-word {
-      flex: 1; /* Takes up available space */
+      flex: 1;
       padding: 10px;
       font-size: 16px;
     }
@@ -76,10 +90,15 @@
   </style>
 </head>
 <body>
+  <div class="logo-container">
+    <img src="logos/logo_full.png" alt="Logo">
+  </div>
+
   <div class="input-container">
     <input type="text" id="input-word" placeholder="Enter a sentence">
     <button id="convert-btn">Convert</button>
   </div>
+  
   <div id="output-container"></div>
   <script src="popup.js"></script>
 </body>
