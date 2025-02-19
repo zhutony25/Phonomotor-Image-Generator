@@ -2,29 +2,84 @@
 <html>
 <head>
   <style>
-    body { width: 750px; padding: 10px; }
+    /* Set body and html to fill the entire screen */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Center content with flexbox */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      text-align: center;
+      padding: 10px;
+    }
+
+    /* Input container to align input and button in a row */
+    .input-container {
+      display: flex;
+      width: 90%;
+      max-width: 600px;
+      padding: 25px;
+    }
+
+    /* Input bar styling */
+    #input-word {
+      flex: 1; /* Takes up available space */
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    /* Convert button styling */
+    #convert-btn {
+      margin-left: 10px;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* Output container styling */
+    #output-container {
+      font-size: 24px;
+      font-weight: bold;
+      width: 90%;
+      max-width: 90%;
+      margin-top: 20px;
+      padding: 25px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      text-align: center;
+      gap: 20px;
+    }
+
+    /* Word container styling */
     .word-container {
       display: inline-block;
       margin: 5px;
+      width: 30%;
       text-align: center;
-    }
-    .phoneme-image {
       max-width: 150px;
-      display: block;
-      margin: 3px auto;
     }
-    #output-container {
-        font-size: 24px; /* Increase text size */
-        font-weight: bold; /* Make it bolder for better visibility */
-        text-align: center; /* Center-align text */
-        margin-bottom: 10px; /* Add spacing between text and images */
+
+    /* Phoneme image styling */
+    .phoneme-image {
+      max-width: 100%;
+      display: block;
+      margin: 10px auto;
     }
 
   </style>
 </head>
 <body>
-  <input type="text" id="input-word" placeholder="Enter a sentence" style="width: 100%">
-  <button id="convert-btn">Convert</button>
+  <div class="input-container">
+    <input type="text" id="input-word" placeholder="Enter a sentence">
+    <button id="convert-btn">Convert</button>
+  </div>
   <div id="output-container"></div>
   <script src="popup.js"></script>
 </body>

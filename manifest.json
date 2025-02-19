@@ -2,12 +2,15 @@
     "manifest_version": 3,
     "name": "Phonomoter Image Generator",
     "version": "1.0",
-    "permissions": ["storage"],
+    "permissions": ["storage", "tabs"],
     "action": {
-      "default_popup": "popup.html"
+      "default_title": "Open Fullscreen"
+    },
+    "background": {
+      "service_worker": "background.js"
     },
     "web_accessible_resources": [{
-      "resources": ["phonemes.json", "images/*"],
+      "resources": ["phonemes.json", "images/*", "popup.html"],
       "matches": ["<all_urls>"]
     }]
   }
