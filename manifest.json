@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Phonomoter Image Generator",
+  "name": "ASL Phonomotor Image Generator",
   "version": "1.0",
   "permissions": ["storage", "tabs"],
   "action": {
