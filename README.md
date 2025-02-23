@@ -1,2 +1,2 @@
 # Phonomotor Image Generator
-Chrome extension converting text into pictures to assist stroke survivors with speech therapy
+Chrome extension that converts text into descriptive pictures to help with speech therapy
