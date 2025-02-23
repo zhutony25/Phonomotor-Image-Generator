@@ -1,4 +1,11 @@
-document.getElementById('convert-btn').addEventListener('click', async () => {
+document.getElementById('convert-btn').addEventListener('click', convertText);
+document.getElementById('input-word').addEventListener('keypress', (event) => {
+  if (event.key == 'Enter') {
+    convertText();
+  }
+});
+
+async function convertText() {
     const input = document.getElementById('input-word').value.trim();
     const outputContainer = document.getElementById('output-container');
     outputContainer.innerHTML = ''; // Clear previous results
@@ -51,4 +58,4 @@ document.getElementById('convert-btn').addEventListener('click', async () => {
       console.error('Error:', error);
       outputContainer.textContent = 'Error processing request';
     }
-  });
+  }
