@@ -2,91 +2,129 @@
 <html>
 <head>
   <style>
-    /* Set body and html to fill the entire screen */
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
+      font-family: Arial, sans-serif;
     }
 
-    /* Center content with flexbox */
     body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 100%;
-      text-align: center;
-      padding: 10px;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
-    /* Logo container */
     .logo-container {
       position: absolute;
-      top: 0px;
+      top: 20px;
       left: 20px;
-      z-index: 1000; /* Ensure it stays above other elements */
     }
 
     .logo-container img {
-      width: 150px; /* Increase size */
-      height: auto; /* Maintain aspect ratio */
+      width: 150px;
+      height: auto;
     }
 
-    /* Input container to align input and button in a row */
-    .input-container {
+    .mode-switch {
+      margin: 40px 0 20px;
       display: flex;
-      width: 90%;
-      top: 10px;
-      max-width: 600px;
-      padding: 25px;
+      gap: 15px;
     }
 
-    /* Input bar styling */
+    .mode-switch label {
+      display: flex;
+      align-items: center;
+      padding: 8px 15px;
+      border-radius: 20px;
+      background: #f0f0f0;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .mode-switch label:hover {
+      background: #e0e0e0;
+    }
+
+    .input-container {
+      width: 90%;
+      max-width: 600px;
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
     #input-word {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
       font-size: 16px;
     }
 
-    /* Convert button styling */
     #convert-btn {
-      margin-left: 10px;
-      padding: 10px;
-      font-size: 16px;
+      padding: 12px 24px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
+      transition: background 0.3s;
     }
 
-    /* Output container styling */
+    #convert-btn:hover {
+      background: #0056b3;
+    }
+
     #output-container {
-      font-size: 24px;
-      font-weight: bold;
       width: 90%;
-      max-width: 90%;
-      margin-top: 20px;
-      padding: 25px;
+      max-width: 1000px;
       display: flex;
       flex-wrap: wrap;
+      gap: 30px;
       justify-content: center;
-      text-align: center;
-      gap: 20px;
+      padding: 20px;
     }
 
-    /* Word container styling */
     .word-container {
-      display: inline-block;
-      margin: 5px;
-      width: 30%;
-      text-align: center;
-      max-width: 150px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      min-width: 200px;
     }
 
-    /* Phoneme image styling */
+    .phonemes-container {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
     .phoneme-image {
-      max-width: 100%;
-      display: block;
-      margin: 10px auto;
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #fff;
+      padding: 5px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
 
+    .word-text {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .error-span {
+      color: #dc3545;
+      font-size: 24px;
+    }
   </style>
 </head>
 <body>
@@ -94,12 +132,24 @@
     <img src="logos/logo_full.png" alt="Logo">
   </div>
 
+  <div class="mode-switch">
+    <label>
+      <input type="radio" name="mode" value="word" checked>
+      Whole Word
+    </label>
+    <label>
+      <input type="radio" name="mode" value="initial">
+      Initial Letter
+    </label>
+  </div>
+
   <div class="input-container">
     <input type="text" id="input-word" placeholder="Enter a sentence">
     <button id="convert-btn">Convert</button>
   </div>
-  
+
   <div id="output-container"></div>
+
   <script src="popup.js"></script>
 </body>
 </html>

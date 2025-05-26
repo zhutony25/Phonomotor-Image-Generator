@@ -1,61 +1,65 @@
 document.getElementById('convert-btn').addEventListener('click', convertText);
 document.getElementById('input-word').addEventListener('keypress', (event) => {
-  if (event.key == 'Enter') {
-    convertText();
-  }
+  if (event.key === 'Enter') convertText();
 });
 
 async function convertText() {
-    const input = document.getElementById('input-word').value.trim();
-    const outputContainer = document.getElementById('output-container');
-    outputContainer.innerHTML = ''; // Clear previous results
-  
-    if (!input) {
-      outputContainer.textContent = 'Please enter a sentence';
-      return;
-    }
-  
-    try {
-      // Load phoneme mapping
-      const response = await fetch(chrome.runtime.getURL('phonemes.json'));
-      const phonemeMap = await response.json();
-  
-      // Split into words and process
-      const words = input.split(/\s+/);
-      
-      for (const word of words) {
-        const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
-        const phonemes = phonemeMap[cleanedWord];
-        
-        // Create word container
-        const wordDiv = document.createElement('div');
-        wordDiv.className = 'word-container';
-        
-        // Add word text
-        const wordText = document.createElement('div');
-        wordText.textContent = word;
-        wordDiv.appendChild(wordText);
-  
-        if (phonemes) {
-          const firstPhoneme = phonemes.split(' ')[0];
-          const phonemeWithoutNumber = firstPhoneme.replace(/\d+/g, ''); // Remove numbers
-          const img = document.createElement('img');
-          img.className = 'phoneme-image';
-          img.src = chrome.runtime.getURL(`phonemes/${phonemeWithoutNumber}.png`);
-          img.alt = phonemeWithoutNumber;
-          wordDiv.appendChild(img);
-        } else {
-          const errorSpan = document.createElement('span');
-          errorSpan.textContent = '❌';
-          errorSpan.title = 'Word not found';
-          wordDiv.appendChild(errorSpan);
-        }
-  
-        outputContainer.appendChild(wordDiv);
-      }
-  
-    } catch (error) {
-      console.error('Error:', error);
-      outputContainer.textContent = 'Error processing request';
-    }
+  const input = document.getElementById('input-word').value.trim();
+  const outputContainer = document.getElementById('output-container');
+  outputContainer.innerHTML = '';
+
+  if (!input) {
+    outputContainer.textContent = 'Please enter a sentence';
+    return;
   }
+
+  try {
+    const response = await fetch('phonemes.json'); // Local path, no chrome.runtime
+    const phonemeMap = await response.json();
+    const words = input.split(/\s+/);
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+
+    for (const word of words) {
+      const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
+      const wordDiv = document.createElement('div');
+      wordDiv.className = 'word-container';
+
+      const fullPhonemeString = phonemeMap[cleanedWord];
+      if (!fullPhonemeString) {
+        const errorSpan = document.createElement('span');
+        errorSpan.textContent = '❌';
+        errorSpan.title = 'Phonemes not found';
+        wordDiv.appendChild(document.createTextNode(word + ' '));
+        wordDiv.appendChild(errorSpan);
+        outputContainer.appendChild(wordDiv);
+        continue;
+      }
+
+      const phonemeList = fullPhonemeString.split(' ').map(p => p.replace(/\d/g, ''));
+      const selectedPhonemes = mode === 'initial' ? [phonemeList[0]] : phonemeList;
+
+      // Word label
+      const wordText = document.createElement('div');
+      wordText.textContent = word;
+      wordDiv.appendChild(wordText);
+
+      const phonemesContainer = document.createElement('div');
+      phonemesContainer.className = 'phonemes-container';
+
+      selectedPhonemes.forEach(phoneme => {
+        const img = document.createElement('img');
+        img.className = 'phoneme-image';
+        img.src = `phonemes/${phoneme}.png`; // ✅ Relative local path
+        img.alt = phoneme;
+        phonemesContainer.appendChild(img);
+      });
+
+      wordDiv.appendChild(phonemesContainer);
+      outputContainer.appendChild(wordDiv);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    outputContainer.textContent = 'Error processing request';
+  }
+}
+
