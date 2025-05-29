@@ -40,6 +40,7 @@ async function convertText() {
 
       // Word label
       const wordText = document.createElement('div');
+      wordText.className = 'word-text';
       wordText.textContent = word;
       wordDiv.appendChild(wordText);
 
@@ -49,8 +50,15 @@ async function convertText() {
       selectedPhonemes.forEach(phoneme => {
         const img = document.createElement('img');
         img.className = 'phoneme-image';
-        img.src = `phonemes/${phoneme}.png`; // ✅ Relative local path
+        img.src = `phonemes/${phoneme}.png`;
         img.alt = phoneme;
+
+        // 🎯 Set custom size for specific phonemes
+        if (['OW', 'AW', 'OY'].includes(phoneme.toUpperCase())) {
+          img.style.width = '250px';
+          img.style.height = '125px';
+        }
+
         phonemesContainer.appendChild(img);
       });
 
