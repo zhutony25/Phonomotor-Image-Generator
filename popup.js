@@ -54,7 +54,7 @@ async function convertText() {
         img.alt = phoneme;
 
         // 🎯 Set custom size for specific phonemes
-        if (['OW', 'AW', 'OY'].includes(phoneme.toUpperCase())) {
+        if (['AW', 'OY'].includes(phoneme.toUpperCase())) {
           img.style.width = '250px';
           img.style.height = '125px';
         }
