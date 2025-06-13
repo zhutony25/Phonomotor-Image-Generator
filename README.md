@@ -1,2 +1,2 @@
 # Phonomotor Image Generator
-Chrome extension that converts text into descriptive pictures to help with speech therapy
+This is a chrome extension made for Austin Speech Labs that converts text into descriptive pictures to help with speech therapy
