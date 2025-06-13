@@ -9,7 +9,7 @@ async function convertText() {
   outputContainer.innerHTML = '';
 
   if (!input) {
-    outputContainer.textContent = 'Please enter a sentence';
+    outputContainer.textContent = 'Please enter a word/sentence';
     return;
   }
 
