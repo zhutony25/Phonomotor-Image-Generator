@@ -191,5 +191,5 @@ pdf.setFont('helvetica', 'normal');
     yOffset += blockHeight + 10; // space between blocks
   }
 
-  pdf.save('phoneme-visuals.pdf');
+  pdf.save('phonomotor_images.pdf');
 });
