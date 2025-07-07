@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <title>Phonomotor Translator</title>
   <style>
     html, body {
       height: 100%;
@@ -42,6 +44,11 @@
       background: #f0f0f0;
       cursor: pointer;
       transition: background 0.3s;
+      font-weight: bold;
+    }
+
+    .mode-switch input[type="radio"] {
+      margin-right: 8px;
     }
 
     .mode-switch label:hover {
@@ -64,7 +71,7 @@
       font-size: 16px;
     }
 
-    #convert-btn {
+    #convert-btn, #download-pdf {
       padding: 12px 24px;
       background: #007bff;
       color: white;
@@ -74,7 +81,8 @@
       transition: background 0.3s;
     }
 
-    #convert-btn:hover {
+    #convert-btn:hover,
+    #download-pdf:hover {
       background: #0056b3;
     }
 
@@ -126,14 +134,23 @@
       color: #dc3545;
       font-size: 24px;
     }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
   </style>
+  
+  <script src="./lib/jspdf.umd.min.js"></script>
 </head>
 <body>
+
   <div class="logo-container">
     <img src="logos/logo_full.png" alt="Logo">
   </div>
 
-  <div class="mode-switch">
+  <div class="mode-switch" aria-label="Phoneme Mode">
     <label>
       <input type="radio" name="mode" value="word" checked>
       Whole Word
@@ -145,12 +162,17 @@
   </div>
 
   <div class="input-container">
-    <input type="text" id="input-word" placeholder="Enter a sentence">
+    <input type="text" id="input-word" placeholder="Enter a sentence" aria-label="Input sentence">
     <button id="convert-btn">Convert</button>
+  </div>
+
+  <div class="button-row">
+    <button id="download-pdf">Download PDF</button>
   </div>
 
   <div id="output-container"></div>
 
+  <!-- scripts -->
   <script src="popup.js"></script>
 </body>
 </html>
