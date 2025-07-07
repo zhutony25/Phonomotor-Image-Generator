@@ -1,137 +1,112 @@
-// import for pdf download
-// import { jsPDF } from './lib/jspdf.umd.min.js';
-
-// declare convert putton + listener for user to press enter key
-document.getElementById('convert-btn').addEventListener('click', convertText);
-document.getElementById('input-word').addEventListener('keypress', (event) => {
-  if (event.key === 'Enter') convertText();
-});
-
-// main conversion function
-async function convertText() {
-
-  // declare input + output container
-  const input = document.getElementById('input-word').value.trim();
-  const outputContainer = document.getElementById('output-container');
-  outputContainer.innerHTML = '';
-
-  // check for null input
-  if (!input) {
-    outputContainer.textContent = 'Please enter a word/sentence';
-    return;
-  }
-
-  // try to convert each word
-  try {
-
-    // declare vars
-    const response = await fetch('phonemes.json');
-    const phonemeMap = await response.json();
-    const words = input.split(/\s+/);
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-
-    // work through all words in box
-    for (const word of words) {
-
-      // clean + place word into container
-      const cleanedWord = word.toLowerCase().replace(/[^a-z]/g, '');
-      const wordDiv = document.createElement('div');
-      wordDiv.className = 'word-container';
-
-      // get phonemes via json map
-      const fullPhonemeString = phonemeMap[cleanedWord];
-      if (!fullPhonemeString) {
-        const errorSpan = document.createElement('span');
-        errorSpan.textContent = '❌';
-        errorSpan.title = 'Phonemes not found';
-        wordDiv.appendChild(document.createTextNode(word + ' '));
-        wordDiv.appendChild(errorSpan);
-        outputContainer.appendChild(wordDiv);
-        continue;
-      }
-
-      const phonemeList = fullPhonemeString.split(' ').map(p => p.replace(/\d/g, ''));
-      const selectedPhonemes = mode === 'initial' ? [phonemeList[0]] : phonemeList;
-
-      // Word label
-      const wordText = document.createElement('div');
-      wordText.className = 'word-text';
-      wordText.textContent = word;
-      wordDiv.appendChild(wordText);
-
-      const phonemesContainer = document.createElement('div');
-      phonemesContainer.className = 'phonemes-container';
-
-      selectedPhonemes.forEach(phoneme => {
-        const img = document.createElement('img');
-        img.className = 'phoneme-image';
-        img.src = `phonemes/${phoneme}.png`;
-        img.alt = phoneme;
-
-        // 🎯 Set custom size for specific phonemes
-        if (['AW', 'OY'].includes(phoneme.toUpperCase())) {
-          img.style.width = '250px';
-          img.style.height = '125px';
-        }
-
-        phonemesContainer.appendChild(img);
-      });
-
-      wordDiv.appendChild(phonemesContainer);
-      outputContainer.appendChild(wordDiv);
-    }
-  } catch (error) { // catch block for non existing word
-    console.error('Error:', error);
-    outputContainer.textContent = 'Error processing request';
-  }
+// Utility: Fetch JSON data
+async function fetchPhonemeMap() {
+  const response = await fetch('phonemes.json');
+  return await response.json();
 }
 
-// helper method for image download
-function getBase64FromImage(url) {
+// Utility: Convert image URL to base64
+function toBase64(url) {
   return fetch(url)
     .then(res => res.blob())
-    .then(blob => new Promise((resolve) => {
+    .then(blob => new Promise(resolve => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     }));
 }
 
-document.getElementById('download-pdf').addEventListener('click', async () => {
-  const pdf = new window.jspdf.jsPDF();
-  const outputContainer = document.getElementById('output-container');
-  const wordBlocks = outputContainer.querySelectorAll('.word-container');
+// Convert Text to Phoneme Images
+async function convertText() {
+  const input = document.getElementById('input-word').value.trim();
+  const output = document.getElementById('output-container');
+  output.innerHTML = '';
+
+  if (!input) {
+    output.textContent = 'Please enter a word or sentence.';
+    return;
+  }
+
+  const phonemeMap = await fetchPhonemeMap();
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  const words = input.split(/\s+/);
+
+  for (const word of words) {
+    const cleaned = word.toLowerCase().replace(/[^a-z]/g, '');
+    const phonemes = phonemeMap[cleaned]?.split(' ').map(p => p.replace(/\d/g, ''));
+
+    const container = document.createElement('div');
+    container.className = 'word-container';
+
+    const title = document.createElement('div');
+    title.className = 'word-text';
+    title.textContent = word;
+    container.appendChild(title);
+
+    const imgRow = document.createElement('div');
+    imgRow.className = 'phonemes-container';
+
+    if (!phonemes) {
+      const failIcon = document.createElement('span');
+      failIcon.textContent = '❌';
+      failIcon.title = 'Phonemes not found';
+      container.appendChild(failIcon);
+    } else {
+      const selected = mode === 'initial' ? [phonemes[0]] : phonemes;
+      for (const phoneme of selected) {
+        const img = document.createElement('img');
+        img.src = `phonemes/${phoneme}.png`;
+        img.alt = phoneme;
+        img.className = 'phoneme-image';
+
+        if (['AW', 'OY'].includes(phoneme.toUpperCase())) {
+          img.style.width = '250px';
+          img.style.height = '125px';
+        }
+
+        imgRow.appendChild(img);
+      }
+    }
+
+    container.appendChild(imgRow);
+    output.appendChild(container);
+  }
+}
+
+// download output into a pdf format
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  const output = document.getElementById('output-container');
+  const blocks = output.querySelectorAll('.word-container');
 
   const pageWidth = pdf.internal.pageSize.width;
   const pageHeight = pdf.internal.pageSize.height;
   const margin = 5;
-
-  let yOffset = margin;
   const blockPadding = 8;
-  const blockWidth = pageWidth - margin * 2;
-  const imgHeight = 40;
+  const imgHeight = 36;
   const imgSpacing = 5;
+  const wordTextHeight = 5;
 
-  for (const block of wordBlocks) {
+  let y = margin;
+
+  for (const block of blocks) {
     const word = block.querySelector('.word-text')?.textContent || '';
-
-    // Start drawing block
-    // Estimate block height dynamically after laying out images
-
-    // Get phoneme images
     const images = block.querySelectorAll('img');
-    
-    // Calculate how many lines images will take:
+
+    // Arrange images into lines that fit within block width
+    const blockWidth = pageWidth - margin * 2;
+    const maxContentWidth = blockWidth - blockPadding * 2;
+
     let lines = [];
     let currentLine = [];
     let currentLineWidth = 0;
-    const maxContentWidth = blockWidth - blockPadding * 2;
 
     for (const img of images) {
-      // Estimate image width based on aspect ratio for height = imgHeight
+      // calculate image width based on aspect ratio for fixed height
       const aspectRatio = img.naturalWidth / img.naturalHeight || 1;
       const imgWidth = imgHeight * aspectRatio;
 
+      // check if current image fits in current line
       if (currentLineWidth + imgWidth > maxContentWidth && currentLine.length > 0) {
         lines.push(currentLine);
         currentLine = [];
@@ -143,41 +118,37 @@ document.getElementById('download-pdf').addEventListener('click', async () => {
     }
     if (currentLine.length) lines.push(currentLine);
 
-    // Calculate total height: 
-    // word text height + (lines * imgHeight) + padding top and bottom
-    const wordTextHeight = 10;
+    // Calculate block height
     const blockHeight = wordTextHeight + lines.length * (imgHeight + 5) + blockPadding * 2;
 
     // Page break if needed
-    if (yOffset + blockHeight > pageHeight - margin) {
+    if (y + blockHeight > pageHeight - margin) {
       pdf.addPage();
-      yOffset = margin;
+      y = margin;
     }
 
     // Draw background rectangle (light gray)
     pdf.setFillColor(245, 245, 245);
-    pdf.roundedRect(margin, yOffset, blockWidth, blockHeight, 3, 3, 'F');
+    pdf.roundedRect(margin, y, blockWidth, blockHeight, 3, 3, 'F');
 
     // Draw word centered
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(24);
-    pdf.text(word, margin + blockWidth / 2, yOffset + blockPadding + wordTextHeight, { align: 'center' });
+    pdf.text(word, margin + blockWidth / 2, y + blockPadding + wordTextHeight, { align: 'center' });
 
-// Reset to normal if needed later
-pdf.setFont('helvetica', 'normal');
-
-    // Draw phoneme images lines below word text
-    let imageYOffset = yOffset + blockPadding + wordTextHeight + 5;
+    // Draw images centered in lines
+    let imageYOffset = y + blockPadding + wordTextHeight + 5;
+    pdf.setFont('helvetica', 'normal');
 
     for (const line of lines) {
-      // Calculate total line width for centering
+      // total width of line images + spacing for centering
       const totalLineWidth = line.reduce((sum, { imgWidth }) => sum + imgWidth, 0) + imgSpacing * (line.length - 1);
       let xOffset = margin + (blockWidth - totalLineWidth) / 2;
 
       for (const { img, imgWidth } of line) {
         try {
-          const imgData = await getBase64FromImage(img.src);
+          const imgData = await toBase64(img.src);
           pdf.addImage(imgData, 'PNG', xOffset, imageYOffset, imgWidth, imgHeight);
           xOffset += imgWidth + imgSpacing;
         } catch (e) {
@@ -188,8 +159,63 @@ pdf.setFont('helvetica', 'normal');
       imageYOffset += imgHeight + 5;
     }
 
-    yOffset += blockHeight + 10; // space between blocks
+    y += blockHeight + 10; // space between blocks
   }
 
-  pdf.save('phonomotor_images.pdf');
+  pdf.save('phoneme_images.pdf');
+}
+
+// ZIP Download
+async function downloadZIP() {
+  const zip = new JSZip();
+  const blocks = document.querySelectorAll('.word-container');
+
+  if (blocks.length === 0) {
+    alert('No words to export.');
+    return;
+  }
+
+  for (const block of blocks) {
+    const word = block.querySelector('.word-text')?.textContent.trim() || 'word';
+
+    // Render the block as a canvas
+    const canvas = await html2canvas(block, { backgroundColor: '#ffffff' });
+
+    // Convert canvas to blob
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+    // Use sanitized filename (remove spaces, special chars)
+    const safeWord = word.replace(/[^\w\-]/g, '_');
+
+    zip.file(`${safeWord}.png`, blob);
+  }
+
+  // Generate zip blob and trigger download
+  const content = await zip.generateAsync({ type: 'blob' });
+  saveAs(content, 'phoneme_images.zip');
+}
+
+
+// UI Behavior and event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('convert-btn').addEventListener('click', convertText);
+  document.getElementById('input-word').addEventListener('keypress', e => {
+    if (e.key === 'Enter') convertText();
+  });
+
+  document.getElementById('download-pdf-btn').addEventListener('click', downloadPDF);
+  document.getElementById('download-png-btn').addEventListener('click', downloadZIP);
+
+  document.getElementById('download-btn').addEventListener('click', () => {
+    const menu = document.getElementById('download-menu');
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = document.getElementById('download-btn');
+    const menu = document.getElementById('download-menu');
+    if (!btn.contains(e.target) && !menu.contains(e.target)) {
+      menu.style.display = 'none';
+    }
+  });
 });
