@@ -4,6 +4,9 @@ async function fetchPhonemeMap() {
   return await response.json();
 }
 
+// wide phonemes
+const WIDE_IMAGE_NAMES = new Set(['ow', 'oy']);
+
 // American English IPA symbols for the CMU/ARPAbet pronunciations in phonemes.json.
 const ARPABET_TO_IPA = {
   AA: 'ɑ',
@@ -93,7 +96,9 @@ const IPA_TO_IMAGE = {
   'ɔɹ': 'or'
 };
 
-const WIDE_IMAGE_NAMES = new Set(['ow', 'oy', 'or']);
+const VOWEL_IPAS = new Set(['ɑ', 'æ', 'ʌ', 'ə', 'ɔ', 'aʊ', 'aɪ', 'ɛ', 'ɝ', 'ɚ', 'e', 'eɪ', 'ɪ', 'i', 'oʊ', 'ɔɪ', 'ʊ', 'u', 'ɔɹ']);
+const OVERRIDE_STORAGE_KEY = 'customWordOverrides';
+const IPA_PICKER_SYMBOLS = ['ɑ', 'æ', 'ʌ', 'ə', 'ɔ', 'ɔɹ', 'aʊ', 'aɪ', 'ɛ', 'ɝ', 'ɚ', 'e', 'ɪ', 'i', 'oʊ', 'ɔɪ', 'ʊ', 'u', 'b', 'tʃ', 'd', 'ð', 'f', 'ɡ', 'h', 'dʒ', 'k', 'l', 'm', 'n', 'ŋ', 'p', 'ɹ', 's', 'ʃ', 't', 'θ', 'v', 'w', 'j', 'z', 'ʒ'];
 
 const WORD_IPA_OVERRIDES = {
   are: ['ɑ', 'ɹ'],
@@ -101,6 +106,9 @@ const WORD_IPA_OVERRIDES = {
   or: ['ɔɹ'],
   will: ['w', 'ɪ', 'l']
 };
+
+let customWordOverrides = {};
+let latestPhonemeMap = null;
 
 function parseArpabetToken(token) {
   const stressMatch = token.match(/\d/);
@@ -123,11 +131,13 @@ function arpabetTokenToIpa(token) {
   return ARPABET_TO_IPA[token.base] || token.base.toLowerCase();
 }
 
-function createIpaEntry(ipa, sourceTokens) {
+function createIpaEntry(ipa, sourceTokens, options = {}) {
   return {
     ipa,
     imageName: IPA_TO_IMAGE[ipa] || '_default',
-    sourceTokens
+    sourceTokens,
+    stress: options.stress || '',
+    isVowel: options.isVowel ?? VOWEL_IPAS.has(ipa)
   };
 }
 
@@ -136,6 +146,10 @@ function ipaSymbolsToEntries(ipaSymbols, sourceLabel) {
 }
 
 function wordToIpaEntries(word, pronunciation) {
+  if (Object.prototype.hasOwnProperty.call(customWordOverrides, word)) {
+    return ipaSymbolsToEntries(customWordOverrides[word], 'custom override');
+  }
+
   if (Object.prototype.hasOwnProperty.call(WORD_IPA_OVERRIDES, word)) {
     return ipaSymbolsToEntries(WORD_IPA_OVERRIDES[word], 'override');
   }
@@ -152,22 +166,95 @@ function pronunciationToIpaEntries(pronunciation) {
     const next = tokens[i + 1];
 
     if (current.base === 'AO' && next?.base === 'R') {
-      entries.push(createIpaEntry('ɔɹ', [current.raw, next.raw]));
+      entries.push(createIpaEntry('ɔɹ', [current.raw, next.raw], { stress: current.stress }));
       i += 1;
       continue;
     }
 
     if (current.base === 'AA' && next?.base === 'R') {
-      entries.push(createIpaEntry('ɑ', [current.raw]));
-      entries.push(createIpaEntry('ɚ', [next.raw]));
+      entries.push(createIpaEntry('ɑ', [current.raw], { stress: current.stress }));
+      entries.push(createIpaEntry('ɚ', [next.raw], { isVowel: false }));
       i += 1;
       continue;
     }
 
-    entries.push(createIpaEntry(arpabetTokenToIpa(current), [current.raw]));
+    entries.push(createIpaEntry(arpabetTokenToIpa(current), [current.raw], { stress: current.stress }));
   }
 
   return entries;
+}
+
+function getChromeStorage() {
+  return typeof chrome !== 'undefined' && chrome.storage?.local ? chrome.storage.local : null;
+}
+
+async function loadCustomOverrides() {
+  const storage = getChromeStorage();
+  if (storage) {
+    const stored = await storage.get(OVERRIDE_STORAGE_KEY);
+    customWordOverrides = stored[OVERRIDE_STORAGE_KEY] || {};
+    return;
+  }
+
+  try {
+    customWordOverrides = JSON.parse(localStorage.getItem(OVERRIDE_STORAGE_KEY) || '{}');
+  } catch {
+    customWordOverrides = {};
+  }
+}
+
+async function saveCustomOverrides() {
+  const storage = getChromeStorage();
+  if (storage) {
+    await storage.set({ [OVERRIDE_STORAGE_KEY]: customWordOverrides });
+    return;
+  }
+
+  localStorage.setItem(OVERRIDE_STORAGE_KEY, JSON.stringify(customWordOverrides));
+}
+
+function normalizeIpaSequence(value) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function getDisplaySettings() {
+  return {
+    showSyllables: document.getElementById('syllables-toggle')?.checked || false,
+    showStress: document.getElementById('stress-toggle')?.checked || false
+  };
+}
+
+function getStressClass(stress) {
+  if (stress === '1') return 'stress-primary';
+  if (stress === '2') return 'stress-secondary';
+  if (stress === '0') return 'stress-unstressed';
+  return '';
+}
+
+function syllabifyEntries(entries) {
+  const syllables = [];
+  let current = [];
+  let currentHasVowel = false;
+
+  for (const entry of entries) {
+    if (entry.isVowel && currentHasVowel && current.length > 0) {
+      syllables.push(current);
+      current = [];
+      currentHasVowel = false;
+    }
+
+    current.push(entry);
+    currentHasVowel = currentHasVowel || entry.isVowel;
+  }
+
+  if (current.length > 0) {
+    syllables.push(current);
+  }
+
+  return syllables.length ? syllables : [entries];
 }
 
 // Utility: Convert image URL to base64
@@ -194,7 +281,29 @@ function addMissingWordMessage(container, word) {
   container.appendChild(failIcon);
 }
 
-function addPhonemeImage(row, phoneme) {
+// function addPhonemeImage(row, phoneme, stressOverride = '') {
+//   const img = document.createElement('img');
+//   img.src = `phonemes/${phoneme.imageName}.png`;
+//   img.alt = `/${phoneme.ipa}/`;
+//   img.title = `/${phoneme.ipa}/`;
+//   img.className = 'phoneme-image';
+//   img.dataset.ipa = phoneme.ipa;
+//   img.dataset.sourcePhonemes = phoneme.sourceTokens.join(' ');
+
+//   const stressClass = getStressClass(stressOverride || phoneme.stress);
+//   if (stressClass && getDisplaySettings().showStress) {
+//     img.classList.add(stressClass);
+//   }
+
+//   img.onerror = () => {
+//     img.onerror = null;
+//     img.src = 'phonemes/_default.png';
+//   };
+
+//   row.appendChild(img);
+// }
+
+function addPhonemeImage(row, phoneme, stressOverride = '') {
   const img = document.createElement('img');
   img.src = `phonemes/${phoneme.imageName}.png`;
   img.alt = `/${phoneme.ipa}/`;
@@ -204,8 +313,12 @@ function addPhonemeImage(row, phoneme) {
   img.dataset.sourcePhonemes = phoneme.sourceTokens.join(' ');
 
   if (WIDE_IMAGE_NAMES.has(phoneme.imageName)) {
-    img.style.width = '250px';
-    img.style.height = '125px';
+    img.classList.add('phoneme-image-wide');
+  }
+
+  const stressClass = getStressClass(stressOverride || phoneme.stress);
+  if (stressClass && getDisplaySettings().showStress) {
+    img.classList.add(stressClass);
   }
 
   img.onerror = () => {
@@ -214,6 +327,90 @@ function addPhonemeImage(row, phoneme) {
   };
 
   row.appendChild(img);
+}
+
+function renderPhonemeEntries(row, entries) {
+  const { showSyllables } = getDisplaySettings();
+
+  if (showSyllables && entries.length > 1) {
+    syllabifyEntries(entries).forEach((syllable, index) => {
+      const group = document.createElement('div');
+      group.className = 'syllable-group';
+      group.dataset.label = `S${index + 1}`;
+
+      const header = document.createElement('div');
+      header.className = 'syllable-header';
+
+      const syllableText = document.createElement('div');
+      syllableText.className = 'syllable-text';
+      syllableText.textContent = `/${syllable.map(entry => entry.ipa).join('')}/`;
+
+      const focusButton = document.createElement('button');
+      focusButton.type = 'button';
+      focusButton.className = 'icon-button syllable-focus-button';
+      focusButton.textContent = '⛶';
+      focusButton.title = 'Focus on syllable';
+      focusButton.setAttribute('aria-label', `Focus on syllable ${index + 1}`);
+      focusButton.addEventListener('click', event => {
+        event.stopPropagation();
+        openSyllableFocusMode(group, syllableText.textContent);
+      });
+
+      header.append(syllableText, focusButton);
+      group.appendChild(header);
+
+      for (const phoneme of syllable) {
+        addPhonemeImage(group, phoneme);
+      }
+
+      row.appendChild(group);
+    });
+    return;
+  }
+
+  for (const phoneme of entries) {
+    addPhonemeImage(row, phoneme);
+  }
+}
+
+function setFocusTitle(targetText = '') {
+  const focusTitle = document.getElementById('focus-title');
+  if (!focusTitle) return;
+
+  focusTitle.textContent = 'Focus Mode';
+  if (!targetText) return;
+
+  const target = document.createElement('span');
+  target.className = 'focus-target';
+  target.textContent = targetText;
+  focusTitle.appendChild(target);
+}
+
+function addWordActions(container, word, entries) {
+  const actions = document.createElement('div');
+  actions.className = 'word-actions';
+
+  const focusButton = document.createElement('button');
+  focusButton.type = 'button';
+  focusButton.className = 'icon-button';
+  focusButton.textContent = '⛶';
+  focusButton.title = 'Focus mode';
+  focusButton.setAttribute('aria-label', `Focus on ${word}`);
+
+  const editButton = document.createElement('button');
+  editButton.type = 'button';
+  editButton.className = 'icon-button';
+  editButton.textContent = '✎';
+  editButton.title = 'Override mapping';
+  editButton.setAttribute('aria-label', `Override mapping for ${word}`);
+
+  actions.append(focusButton, editButton);
+  container.dataset.word = word;
+  container.dataset.entries = JSON.stringify(entries);
+  focusButton.addEventListener('click', () => openFocusMode(container));
+  editButton.addEventListener('click', () => openOverrideDialog(word, entries));
+
+  return actions;
 }
 
 // Convert Text to Phoneme Images
@@ -228,7 +425,9 @@ async function convertText() {
   }
 
   try {
-    const phonemeMap = await fetchPhonemeMap();
+    const phonemeMap = latestPhonemeMap || await fetchPhonemeMap();
+    latestPhonemeMap = phonemeMap;
+    await loadCustomOverrides();
     const mode = document.querySelector('input[name="mode"]:checked').value;
     const words = input.split(/\s+/);
 
@@ -245,20 +444,23 @@ async function convertText() {
         continue;
       }
 
+      const ipaEntries = wordToIpaEntries(cleaned, pronunciation);
+      const selected = mode === 'initial' ? [ipaEntries[0]] : ipaEntries;
+
+      const header = document.createElement('div');
+      header.className = 'word-header';
+
       const title = document.createElement('div');
       title.className = 'word-text';
       title.textContent = word;
-      container.appendChild(title);
+      header.appendChild(title);
+      header.appendChild(addWordActions(container, cleaned, ipaEntries));
+      container.appendChild(header);
 
       const imgRow = document.createElement('div');
       imgRow.className = 'phonemes-container';
 
-      const ipaEntries = wordToIpaEntries(cleaned, pronunciation);
-      const selected = mode === 'initial' ? [ipaEntries[0]] : ipaEntries;
-
-      for (const phoneme of selected) {
-        addPhonemeImage(imgRow, phoneme);
-      }
+      renderPhonemeEntries(imgRow, selected);
 
       container.appendChild(imgRow);
       output.appendChild(container);
@@ -267,6 +469,114 @@ async function convertText() {
     console.error('Error processing text:', error);
     output.textContent = 'Error processing request.';
   }
+}
+
+function closeOverlay(overlayId) {
+  const overlay = document.getElementById(overlayId);
+  if (!overlay) return;
+  overlay.classList.remove('is-open');
+  overlay.setAttribute('aria-hidden', 'true');
+}
+
+function openOverlay(overlayId) {
+  const overlay = document.getElementById(overlayId);
+  if (!overlay) return;
+  overlay.classList.add('is-open');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+function openFocusMode(sourceCard) {
+  const focusContent = document.getElementById('focus-content');
+  if (!focusContent) return;
+
+  const word = sourceCard.querySelector('.word-text')?.textContent;
+  setFocusTitle(word);
+
+  focusContent.innerHTML = '';
+  const clone = sourceCard.cloneNode(true);
+  clone.classList.add('focus-card');
+  focusContent.appendChild(clone);
+  openOverlay('focus-overlay');
+}
+
+function openSyllableFocusMode(sourceGroup, label) {
+  const focusContent = document.getElementById('focus-content');
+  if (!focusContent) return;
+
+  setFocusTitle(label);
+
+  focusContent.innerHTML = '';
+  const clone = sourceGroup.cloneNode(true);
+  clone.querySelectorAll('button').forEach(button => button.remove());
+  focusContent.appendChild(clone);
+  openOverlay('focus-overlay');
+}
+
+function openOverrideDialog(word, entries) {
+  const wordInput = document.getElementById('override-word');
+  const sequenceInput = document.getElementById('override-sequence');
+  if (!wordInput || !sequenceInput) return;
+
+  wordInput.value = word;
+  sequenceInput.value = (customWordOverrides[word] || entries.map(entry => entry.ipa)).join(' ');
+  openOverlay('override-overlay');
+  sequenceInput.focus();
+}
+
+function buildSymbolPicker() {
+  const picker = document.getElementById('symbol-picker');
+  const sequenceInput = document.getElementById('override-sequence');
+  if (!picker || !sequenceInput) return;
+
+  picker.innerHTML = '';
+  for (const symbol of IPA_PICKER_SYMBOLS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = symbol;
+    button.addEventListener('click', () => {
+      insertSymbolAtCursor(sequenceInput, symbol);
+    });
+    picker.appendChild(button);
+  }
+}
+
+function insertSymbolAtCursor(input, symbol) {
+  const value = input.value;
+  const start = input.selectionStart ?? value.length;
+  const end = input.selectionEnd ?? value.length;
+  const before = value.slice(0, start);
+  const after = value.slice(end);
+  const needsSpaceBefore = before.length > 0 && !/\s$/.test(before);
+  const needsSpaceAfter = after.length > 0 && !/^\s/.test(after);
+  const insertion = `${needsSpaceBefore ? ' ' : ''}${symbol}${needsSpaceAfter ? ' ' : ''}`;
+  const nextCursor = before.length + insertion.length;
+
+  input.value = `${before}${insertion}${after}`;
+  input.focus();
+  input.setSelectionRange(nextCursor, nextCursor);
+}
+
+async function saveOverrideFromForm(event) {
+  event.preventDefault();
+  const word = document.getElementById('override-word')?.value.trim().toLowerCase();
+  const sequence = normalizeIpaSequence(document.getElementById('override-sequence')?.value || '');
+
+  if (!word || sequence.length === 0) return;
+
+  customWordOverrides[word] = sequence;
+  await saveCustomOverrides();
+  closeOverlay('override-overlay');
+  await convertText();
+}
+
+async function deleteCurrentOverride() {
+  const word = document.getElementById('override-word')?.value.trim().toLowerCase();
+  if (!word) return;
+
+  delete customWordOverrides[word];
+  await saveCustomOverrides();
+  closeOverlay('override-overlay');
+  await convertText();
 }
 
 // download output into a pdf format
@@ -363,28 +673,50 @@ async function downloadZIP() {
     return;
   }
 
-  for (const block of blocks) {
-    const word = block.querySelector('.word-text')?.textContent.trim() || 'word';
-    const canvas = await html2canvas(block, { backgroundColor: '#ffffff' });
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    const safeWord = word.replace(/[^\w-]/g, '_');
+  document.body.classList.add('exporting');
 
-    zip.file(`${safeWord}.png`, blob);
+  try {
+    for (const block of blocks) {
+      const word = block.querySelector('.word-text')?.textContent.trim() || 'word';
+      const canvas = await html2canvas(block, { backgroundColor: '#ffffff' });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const safeWord = word.replace(/[^\w-]/g, '_');
+
+      zip.file(`${safeWord}.png`, blob);
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, 'phoneme_images.zip');
+  } finally {
+    document.body.classList.remove('exporting');
   }
-
-  const content = await zip.generateAsync({ type: 'blob' });
-  saveAs(content, 'phoneme_images.zip');
 }
 
 // UI Behavior and event listeners
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadCustomOverrides();
+  buildSymbolPicker();
+
   document.getElementById('convert-btn').addEventListener('click', convertText);
   document.getElementById('input-word').addEventListener('keypress', e => {
     if (e.key === 'Enter') convertText();
   });
 
+  document.getElementById('syllables-toggle').addEventListener('change', () => {
+    if (document.getElementById('output-container').children.length) convertText();
+  });
+
+  document.getElementById('stress-toggle').addEventListener('change', () => {
+    if (document.getElementById('output-container').children.length) convertText();
+  });
+
   document.getElementById('download-pdf-btn').addEventListener('click', downloadPDF);
   document.getElementById('download-png-btn').addEventListener('click', downloadZIP);
+  document.getElementById('close-focus-btn').addEventListener('click', () => closeOverlay('focus-overlay'));
+  document.getElementById('close-override-btn').addEventListener('click', () => closeOverlay('override-overlay'));
+  document.getElementById('cancel-override-btn').addEventListener('click', () => closeOverlay('override-overlay'));
+  document.getElementById('override-form').addEventListener('submit', saveOverrideFromForm);
+  document.getElementById('delete-override-btn').addEventListener('click', deleteCurrentOverride);
 
   document.getElementById('download-btn').addEventListener('click', () => {
     const menu = document.getElementById('download-menu');
@@ -399,6 +731,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn.contains(e.target) && !menu.contains(e.target)) {
       menu.style.display = 'none';
       btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.querySelectorAll('.overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        closeOverlay(overlay.id);
+      }
+    });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeOverlay('focus-overlay');
+      closeOverlay('override-overlay');
     }
   });
 });

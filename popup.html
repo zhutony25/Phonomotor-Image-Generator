@@ -4,155 +4,826 @@
   <meta charset="UTF-8" />
   <title>Phonomotor Translator</title>
   <style>
+    :root {
+      --bg: #f7fcfa;
+      --surface: #ffffff;
+      --surface-strong: #f0faf6;
+      --text: #13362e;
+      --muted: #5b756d;
+      --line: #d8eee6;
+      --primary: #56C196;
+      --primary-dark: #238664;
+      --primary-deep: #14654b;
+      --accent: #2fae83;
+      --danger: #d92d20;
+      --shadow: 0 18px 50px rgba(20, 101, 75, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
-      font-family: Arial, sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
     body {
+      min-height: 100%;
+      padding: 28px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(86, 193, 150, 0.16), transparent 34rem),
+        radial-gradient(circle at 92% 16%, rgba(86, 193, 150, 0.09), transparent 30rem),
+        linear-gradient(145deg, #ffffff 0%, #fbfffd 46%, var(--bg) 100%);
+    }
+
+    .app-shell {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+    }
+
+    .app-header {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      padding: 20px;
-      box-sizing: border-box;
-      position: relative;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
     }
+
     .logo-container {
-      position: absolute;
-      top: 20px;
-      left: 20px;
+      display: flex;
+      align-items: center;
+      min-width: 0;
     }
+
     .logo-container img {
-      width: 150px;
+      width: min(220px, 52vw);
       height: auto;
     }
-    .mode-switch {
-      margin: 40px 0 20px;
-      display: flex;
-      gap: 15px;
+
+    .app-title {
+      flex: 1 1 auto;
+      min-width: 220px;
+      text-align: center;
     }
+
+    .app-title h1 {
+      margin: 0;
+      color: var(--text);
+      font-size: clamp(30px, 4vw, 54px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .mode-switch {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 252, 249, 0.9));
+      box-shadow: 0 6px 24px rgba(20, 101, 75, 0.06);
+    }
+
     .mode-switch label {
       display: flex;
       align-items: center;
-      padding: 8px 15px;
-      border-radius: 20px;
-      background: #f0f0f0;
+      min-height: 38px;
+      padding: 0 16px;
+      border-radius: 999px;
       cursor: pointer;
-      transition: background 0.3s;
-      font-weight: bold;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      transition: color 0.2s, background 0.2s, box-shadow 0.2s;
     }
+
     .mode-switch input[type="radio"] {
-      margin-right: 8px;
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
     }
-    .mode-switch label:hover {
-      background: #e0e0e0;
+
+    .mode-switch label:has(input:checked) {
+      color: var(--text);
+      background: linear-gradient(135deg, #ffffff, #f4fcf8);
+      box-shadow: 0 4px 14px rgba(20, 101, 75, 0.09);
     }
-    .input-container {
-      width: 90%;
-      max-width: 600px;
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    #input-word {
-      flex: 1;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-    #convert-btn, #download-btn {
-      padding: 12px 24px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.3s;
-      position: relative;
-      user-select: none;
-    }
-    #convert-btn:hover,
-    #download-btn:hover {
-      background: #0056b3;
-    }
-    #output-container {
-      width: 90%;
-      max-width: 5000px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px;
-      justify-content: center;
-      padding: 20px;
-    }
-    .word-container {
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      min-width: 200px;
-    }
-    .phonemes-container {
+
+    .display-controls {
       display: flex;
       gap: 8px;
-      justify-content: center;
       flex-wrap: wrap;
-      margin-top: 10px;
+      grid-column: 1 / -1;
     }
-    .phoneme-image {
-      width: 125px;
-      height: 125px;
-      object-fit: contain;
-      border-radius: 4px;
-      background: #fff;
-      padding: 5px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+    .input-panel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+      padding: 16px;
+      border: 1px solid rgba(207, 232, 223, 0.95);
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 253, 250, 0.92)),
+        linear-gradient(180deg, rgba(86, 193, 150, 0.06), transparent);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
     }
-    .word-text {
-      font-size: 24px;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 10px;
-      color: #333;
+
+    .input-container {
+      display: flex;
+      gap: 12px;
+      min-width: 0;
     }
-    .error-span {
-      color: #dc3545;
-      font-size: 24px;
+
+    #input-word {
+      flex: 1;
+      min-width: 0;
+      height: 52px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--text);
+      background: linear-gradient(180deg, #ffffff, #fbfffd);
+      font-size: 17px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
+
+    #input-word:focus {
+      border-color: rgba(86, 193, 150, 0.95);
+      background: var(--surface);
+      box-shadow: 0 0 0 4px rgba(86, 193, 150, 0.13);
+    }
+
+    #convert-btn, #download-btn, .control-toggle {
+      height: 52px;
+      padding: 0 20px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    #convert-btn {
+      min-width: 120px;
+      box-shadow: 0 12px 26px rgba(35, 134, 100, 0.28);
+    }
+
+    #download-btn {
+      background: linear-gradient(135deg, var(--primary-deep), #0f4f3b);
+      box-shadow: 0 12px 26px rgba(20, 101, 75, 0.2);
+    }
+
+    .control-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7fcfa);
+      color: var(--muted);
+      box-shadow: none;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .control-toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+    }
+
+    #convert-btn:hover,
+    #download-btn:hover,
+    .icon-button:hover {
+      transform: translateY(-1px);
+    }
+
+    #convert-btn:hover {
+      background: linear-gradient(135deg, #67cda4, var(--primary-deep));
+    }
+
+    #download-btn:hover {
+      background: linear-gradient(135deg, #1c7658, #0b3f2f);
+    }
+
+    #convert-btn:active,
+    #download-btn:active {
+      transform: translateY(0);
+    }
+
     .button-row {
       display: flex;
-      gap: 10px;
-      margin-bottom: 30px;
+      justify-content: flex-end;
       position: relative;
     }
+
     #download-menu {
       display: none;
       position: absolute;
-      top: 50px;
+      top: 60px;
       right: 0;
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      width: 190px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #f8fefb);
+      box-shadow: var(--shadow);
       z-index: 1000;
-      width: 160px;
-      padding: 8px 0;
     }
+
     #download-menu button {
       width: 100%;
-      background: none;
+      min-height: 42px;
+      padding: 0 12px;
       border: none;
-      padding: 10px 20px;
-      text-align: left;
+      border-radius: 10px;
+      background: none;
+      color: var(--text);
       cursor: pointer;
-      font-weight: bold;
-      color: #007bff;
-      transition: background 0.2s;
+      text-align: left;
+      font-weight: 750;
+      transition: background 0.2s, color 0.2s;
     }
+
     #download-menu button:hover {
-      background: #f0f0f0;
+      background: var(--surface-strong);
+      color: var(--primary);
     }
+
+    #output-container {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: start;
+      justify-content: center;
+      padding: 18px 0 32px;
+    }
+
+    .word-container {
+      flex: 0 0 auto;
+      width: fit-content;
+      min-width: 280px;
+      max-width: calc(100vw - 56px);
+      padding: 18px;
+      padding-top: 52px;
+      border: 1px solid rgba(207, 232, 223, 0.95);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 255, 251, 0.95)),
+        linear-gradient(135deg, rgba(86, 193, 150, 0.1), transparent);
+      box-shadow: 0 10px 30px rgba(20, 101, 75, 0.1);
+      position: relative;
+    }
+
+    .word-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      min-height: 32px;
+    }
+
+    .phonemes-container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+      max-width: 100%;
+    }
+
+    .syllable-group {
+      display: flex;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 54px 12px 12px;
+      border: 2px solid rgba(86, 193, 150, 0.45);
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 252, 247, 0.82)),
+        linear-gradient(135deg, rgba(86, 193, 150, 0.12), transparent);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 8px 20px rgba(20, 101, 75, 0.08);
+    }
+
+    .syllable-header {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 30px;
+    }
+
+    .syllable-text {
+      min-height: 30px;
+      max-width: calc(100% - 42px);
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--primary-deep);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0;
+      line-height: 1.2;
+      box-shadow: inset 0 0 0 1px rgba(86, 193, 150, 0.24);
+    }
+
+    .syllable-focus-button {
+      position: absolute;
+      right: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      font-size: 15px;
+      flex: 0 0 auto;
+    }
+
+    .syllable-group::before {
+      content: attr(data-label);
+      position: absolute;
+      top: -11px;
+      left: 14px;
+      min-width: 34px;
+      min-height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 6px 14px rgba(35, 134, 100, 0.22);
+    }
+
+    .phoneme-image {
+      width: 132px;
+      height: 132px;
+      padding: 10px;
+      border: 1px solid #d7eee5;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #f2fbf7);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.86), 0 7px 18px rgba(20, 101, 75, 0.09);
+      object-fit: contain;
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    }
+
+    .phoneme-image-wide {
+      width: 250px;
+      height: 132px;
+    }
+
+    .stress-primary {
+      width: 190px;
+      height: 190px;
+      border: 4px solid rgba(35, 134, 100, 0.82);
+      background:
+        linear-gradient(180deg, #ffffff, #effbf5),
+        linear-gradient(135deg, rgba(86, 193, 150, 0.22), transparent);
+      box-shadow: 0 0 0 6px rgba(86, 193, 150, 0.18), 0 18px 34px rgba(20, 101, 75, 0.2);
+    }
+
+    .stress-secondary {
+      width: 165px;
+      height: 165px;
+      border: 3px solid rgba(86, 193, 150, 0.65);
+      background:
+        linear-gradient(180deg, #ffffff, #f3fcf8),
+        linear-gradient(135deg, rgba(86, 193, 150, 0.14), transparent);
+      box-shadow: 0 0 0 4px rgba(86, 193, 150, 0.12), 0 12px 26px rgba(20, 101, 75, 0.14);
+    }
+
+    .stress-unstressed {
+      width: 108px;
+      height: 108px;
+      opacity: 0.82;
+      border-color: rgba(207, 232, 223, 0.9);
+    }
+
+    .phoneme-image-wide.stress-primary {
+      width: 300px;
+      height: 190px;
+    }
+
+    .phoneme-image-wide.stress-secondary {
+      width: 275px;
+      height: 165px;
+    }
+
+    .phoneme-image-wide.stress-unstressed {
+      width: 220px;
+      height: 108px;
+    }
+
+    .phoneme-image:hover {
+      transform: translateY(-2px);
+      border-color: rgba(86, 193, 150, 0.8);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9), 0 12px 26px rgba(20, 101, 75, 0.16);
+    }
+
+    .word-text {
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 24px;
+      font-weight: 850;
+      letter-spacing: 0;
+      text-align: center;
+      overflow-wrap: normal;
+      word-break: normal;
+      white-space: nowrap;
+    }
+
+    .word-actions {
+      display: flex;
+      gap: 6px;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 2;
+    }
+
+    .icon-button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff, #f7fcfa);
+      color: var(--primary-deep);
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 850;
+      line-height: 1;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .icon-button:hover {
+      border-color: rgba(86, 193, 150, 0.8);
+      box-shadow: 0 8px 18px rgba(20, 101, 75, 0.12);
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(19, 54, 46, 0.34);
+      backdrop-filter: blur(12px);
+      z-index: 3000;
+    }
+
+    .overlay.is-open {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(920px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 22px;
+      border: 1px solid rgba(216, 238, 230, 0.95);
+      border-radius: 24px;
+      background: linear-gradient(180deg, #ffffff, #f8fefb);
+      box-shadow: 0 24px 80px rgba(20, 101, 75, 0.2);
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .focus-target {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      margin-left: 8px;
+      padding: 3px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(86, 193, 150, 0.18), rgba(255, 255, 255, 0.78));
+      color: var(--primary-deep);
+      box-shadow: inset 0 0 0 1px rgba(86, 193, 150, 0.28);
+    }
+
+    .focus-content {
+      display: flex;
+      justify-content: center;
+      overflow: visible;
+      padding: 28px 0 18px;
+    }
+
+    .focus-content .word-container {
+      margin: 0 auto;
+      transform: none;
+    }
+
+    .focus-content .syllable-group {
+      margin: 0 auto;
+      transform: none;
+    }
+
+    .focus-content .phoneme-image {
+      width: 180px;
+      height: 180px;
+    }
+
+    .focus-content .stress-primary {
+      width: 210px;
+      height: 210px;
+    }
+
+    .focus-content .stress-secondary {
+      width: 194px;
+      height: 194px;
+    }
+
+    .focus-content .stress-unstressed {
+      width: 158px;
+      height: 158px;
+    }
+
+    .syllable-group .stress-primary {
+      width: 154px;
+      height: 154px;
+      border-width: 3px;
+      box-shadow: 0 0 0 4px rgba(86, 193, 150, 0.16), 0 12px 24px rgba(20, 101, 75, 0.16);
+    }
+
+    .syllable-group .stress-secondary {
+      width: 144px;
+      height: 144px;
+      border-width: 2px;
+      box-shadow: 0 0 0 3px rgba(86, 193, 150, 0.1), 0 10px 20px rgba(20, 101, 75, 0.12);
+    }
+
+    .syllable-group .stress-unstressed {
+      width: 112px;
+      height: 112px;
+    }
+
+    .focus-content .syllable-group .stress-primary {
+      width: 190px;
+      height: 190px;
+    }
+
+    .focus-content .syllable-group .stress-secondary {
+      width: 174px;
+      height: 174px;
+    }
+
+    .focus-content .syllable-group .stress-unstressed {
+      width: 142px;
+      height: 142px;
+    }
+
+    .focus-content .phoneme-image-wide {
+      width: 320px;
+      height: 180px;
+    }
+
+    .focus-content .phoneme-image-wide.stress-primary {
+      width: 360px;
+      height: 210px;
+    }
+
+    .focus-content .phoneme-image-wide.stress-secondary {
+      width: 335px;
+      height: 194px;
+    }
+
+    .focus-content .phoneme-image-wide.stress-unstressed {
+      width: 280px;
+      height: 158px;
+    }
+
+    .override-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .override-form label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .syllable-group .phoneme-image-wide {
+      width: 220px;
+      height: 132px;
+    }
+
+    .syllable-group .phoneme-image-wide.stress-primary {
+      width: 260px;
+      height: 154px;
+    }
+
+    .syllable-group .phoneme-image-wide.stress-secondary {
+      width: 240px;
+      height: 144px;
+    }
+
+    .syllable-group .phoneme-image-wide.stress-unstressed {
+      width: 200px;
+      height: 112px;
+    }
+
+    .focus-content .syllable-group .phoneme-image-wide {
+      width: 320px;
+      height: 180px;
+    }
+
+    .focus-content .syllable-group .phoneme-image-wide.stress-primary {
+      width: 340px;
+      height: 190px;
+    }
+
+    .focus-content .syllable-group .phoneme-image-wide.stress-secondary {
+      width: 310px;
+      height: 174px;
+    }
+
+    .focus-content .syllable-group .phoneme-image-wide.stress-unstressed {
+      width: 260px;
+      height: 142px;
+    }
+
+    .override-form input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--text);
+      background: #ffffff;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .symbol-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .symbol-picker button,
+    .dialog-actions button {
+      min-height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .dialog-actions .primary-action {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+    }
+
+    body.exporting .word-actions,
+    .focus-content .word-actions {
+      display: none;
+    }
+
+    .error-span {
+      display: block;
+      color: var(--danger);
+      font-size: 30px;
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 18px;
+      }
+
+      .app-header,
+      .input-panel,
+      .input-container {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .app-header {
+        align-items: stretch;
+        gap: 16px;
+      }
+
+      .app-title {
+        min-width: 0;
+        text-align: left;
+      }
+
+      .app-title h1 {
+        white-space: normal;
+      }
+
+      .toolbar,
+      .button-row {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .mode-switch,
+      #download-btn,
+      #convert-btn {
+        width: 100%;
+      }
+
+      .mode-switch label {
+        flex: 1;
+        justify-content: center;
+      }
+
+      #download-menu {
+        left: 0;
+        right: auto;
+        width: 100%;
+      }
+
+      .word-container {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+      }
+
+      .word-header {
+        align-items: flex-start;
+      }
+
+      .word-text {
+        white-space: normal;
+      }
+    }
+
+    @supports not selector(:has(*)) {
+      .mode-switch label {
+        background: var(--surface);
+      }
+    }
+
   </style>
 
   <!-- external libraries -->
@@ -162,32 +833,83 @@
   <script src="./lib/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="logo-container">
+        <img src="logos/logo_full.png" alt="Austin Speech Labs" />
+      </div>
 
-  <div class="logo-container">
-    <img src="logos/logo_full.png" alt="Logo" />
-  </div>
+      <div class="app-title">
+        <h1>Phonology Builder</h1>
+      </div>
 
-  <div class="mode-switch" aria-label="Phoneme Mode">
-    <label><input type="radio" name="mode" value="word" checked /> Whole Word</label>
-    <label><input type="radio" name="mode" value="initial" /> Initial Letter</label>
-  </div>
+      <div class="toolbar">
+        <div class="mode-switch" aria-label="Phoneme Mode">
+          <label><input type="radio" name="mode" value="word" checked /> Whole Word</label>
+          <label><input type="radio" name="mode" value="initial" /> Initial Letter</label>
+        </div>
+      </div>
+    </header>
 
-  <div class="input-container">
-    <input type="text" id="input-word" placeholder="Enter a sentence" aria-label="Input sentence" />
-    <button id="convert-btn">Convert</button>
-  </div>
+    <section class="input-panel" aria-label="Text conversion controls">
+      <div class="input-container">
+        <input type="text" id="input-word" placeholder="Enter a sentence" aria-label="Input sentence" />
+        <button id="convert-btn">Convert</button>
+      </div>
 
-  <div class="button-row">
-    <button id="download-btn" aria-haspopup="true" aria-expanded="false" aria-controls="download-menu">
-      Download ▼
-    </button>
-    <div id="download-menu" role="menu" aria-label="Download options">
-      <button id="download-pdf-btn" role="menuitem">Download PDF</button>
-      <button id="download-png-btn" role="menuitem">Download PNG ZIP</button>
+      <div class="button-row">
+        <button id="download-btn" aria-haspopup="true" aria-expanded="false" aria-controls="download-menu">
+          Download
+        </button>
+        <div id="download-menu" role="menu" aria-label="Download options">
+          <button id="download-pdf-btn" role="menuitem">Download PDF</button>
+          <button id="download-png-btn" role="menuitem">Download PNG ZIP</button>
+        </div>
+      </div>
+
+      <div class="display-controls" aria-label="Display options">
+        <label class="control-toggle"><input type="checkbox" id="syllables-toggle" /> Syllables</label>
+        <label class="control-toggle"><input type="checkbox" id="stress-toggle" checked /> Stress size</label>
+      </div>
+    </section>
+
+    <div id="output-container"></div>
+
+    <div class="overlay" id="focus-overlay" aria-hidden="true">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="focus-title">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="focus-title">Focus Mode</h2>
+          <button class="icon-button" id="close-focus-btn" aria-label="Close focus mode">x</button>
+        </div>
+        <div class="focus-content" id="focus-content"></div>
+      </div>
     </div>
-  </div>
 
-  <div id="output-container"></div>
+    <div class="overlay" id="override-overlay" aria-hidden="true">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="override-title">
+        <div class="dialog-header">
+          <h2 class="dialog-title" id="override-title">Custom Mapping</h2>
+          <button class="icon-button" id="close-override-btn" aria-label="Close custom mapping">x</button>
+        </div>
+        <form class="override-form" id="override-form">
+          <label>
+            Word
+            <input type="text" id="override-word" readonly />
+          </label>
+          <label>
+            IPA sequence
+            <input type="text" id="override-sequence" placeholder="Example: s t ɑ ɚ" />
+          </label>
+          <div class="symbol-picker" id="symbol-picker" aria-label="IPA symbol picker"></div>
+          <div class="dialog-actions">
+            <button type="button" id="delete-override-btn">Remove Override</button>
+            <button type="button" id="cancel-override-btn">Cancel</button>
+            <button type="submit" class="primary-action">Save Override</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
 
   <!-- external script -->
   <script src="popup.js"></script>
