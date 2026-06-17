@@ -97,6 +97,57 @@ const IPA_TO_IMAGE = {
 };
 
 const VOWEL_IPAS = new Set(['ɑ', 'æ', 'ʌ', 'ə', 'ɔ', 'aʊ', 'aɪ', 'ɛ', 'ɝ', 'ɚ', 'e', 'eɪ', 'ɪ', 'i', 'oʊ', 'ɔɪ', 'ʊ', 'u', 'ɔɹ']);
+const ARPABET_BASES = new Set(Object.keys(ARPABET_TO_IPA));
+const ARPABET_VOWEL_BASES = new Set(['AA', 'AE', 'AH', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY', 'IH', 'IY', 'OW', 'OY', 'UH', 'UW']);
+const CHECKED_VOWEL_BASES = new Set(['AE', 'AH', 'EH', 'IH', 'UH']);
+const CHECKED_VOWEL_IPAS = new Set(['æ', 'ʌ', 'ɛ', 'ɪ', 'ʊ']);
+const SINGLE_ONSET_BASES = new Set(['B', 'CH', 'D', 'DH', 'F', 'G', 'HH', 'JH', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'SH', 'T', 'TH', 'V', 'W', 'Y', 'Z', 'ZH']);
+const COMPLEX_ONSET_BASES = new Set([
+  'B L', 'B R', 'B W', 'B Y',
+  'D R', 'D W', 'D Y',
+  'F L', 'F R', 'F Y',
+  'G L', 'G R', 'G W', 'G Y',
+  'HH Y',
+  'K L', 'K R', 'K W', 'K Y',
+  'L Y',
+  'M Y',
+  'N Y',
+  'P L', 'P R', 'P W', 'P Y',
+  'S F', 'S K', 'S K L', 'S K R', 'S K W', 'S K Y',
+  'S L', 'S M', 'S N', 'S P', 'S P L', 'S P R', 'S P Y',
+  'S T', 'S T R', 'S T Y', 'S W',
+  'SH R',
+  'T R', 'T W', 'T Y',
+  'TH R', 'TH W', 'TH Y',
+  'V R', 'V Y'
+]);
+const IPA_TO_SYLLABLE_PHONE = {
+  b: ['B'],
+  'tʃ': ['CH'],
+  d: ['D'],
+  'ð': ['DH'],
+  f: ['F'],
+  'ɡ': ['G'],
+  h: ['HH'],
+  'dʒ': ['JH'],
+  k: ['K'],
+  l: ['L'],
+  m: ['M'],
+  n: ['N'],
+  'ŋ': ['NG'],
+  p: ['P'],
+  'ɹ': ['R'],
+  'ɚ': ['R'],
+  s: ['S'],
+  'ʃ': ['SH'],
+  t: ['T'],
+  'θ': ['TH'],
+  v: ['V'],
+  w: ['W'],
+  j: ['Y'],
+  z: ['Z'],
+  'ʒ': ['ZH']
+};
 const OVERRIDE_STORAGE_KEY = 'customWordOverrides';
 const IPA_PICKER_SYMBOLS = ['ɑ', 'æ', 'ʌ', 'ə', 'ɔ', 'ɔɹ', 'aʊ', 'aɪ', 'ɛ', 'ɝ', 'ɚ', 'e', 'ɪ', 'i', 'oʊ', 'ɔɪ', 'ʊ', 'u', 'b', 'tʃ', 'd', 'ð', 'f', 'ɡ', 'h', 'dʒ', 'k', 'l', 'm', 'n', 'ŋ', 'p', 'ɹ', 's', 'ʃ', 't', 'θ', 'v', 'w', 'j', 'z', 'ʒ'];
 
@@ -145,13 +196,29 @@ function ipaSymbolsToEntries(ipaSymbols, sourceLabel) {
   return ipaSymbols.map(ipa => createIpaEntry(ipa, [sourceLabel]));
 }
 
+function hasCustomWordOverride(word) {
+  return Object.prototype.hasOwnProperty.call(customWordOverrides, word);
+}
+
+function hasBuiltInWordOverride(word) {
+  return Object.prototype.hasOwnProperty.call(WORD_IPA_OVERRIDES, word);
+}
+
+function hasWordMapping(word, pronunciation) {
+  return Boolean(pronunciation) || hasCustomWordOverride(word) || hasBuiltInWordOverride(word);
+}
+
 function wordToIpaEntries(word, pronunciation) {
-  if (Object.prototype.hasOwnProperty.call(customWordOverrides, word)) {
+  if (hasCustomWordOverride(word)) {
     return ipaSymbolsToEntries(customWordOverrides[word], 'custom override');
   }
 
-  if (Object.prototype.hasOwnProperty.call(WORD_IPA_OVERRIDES, word)) {
+  if (hasBuiltInWordOverride(word)) {
     return ipaSymbolsToEntries(WORD_IPA_OVERRIDES[word], 'override');
+  }
+
+  if (!pronunciation) {
+    return [];
   }
 
   return pronunciationToIpaEntries(pronunciation);
@@ -234,24 +301,101 @@ function getStressClass(stress) {
   return '';
 }
 
-function syllabifyEntries(entries) {
-  const syllables = [];
-  let current = [];
-  let currentHasVowel = false;
+function getSourceBases(entry) {
+  return (entry.sourceTokens || [])
+    .map(token => parseArpabetToken(token).base)
+    .filter(base => ARPABET_BASES.has(base));
+}
 
-  for (const entry of entries) {
-    if (entry.isVowel && currentHasVowel && current.length > 0) {
-      syllables.push(current);
-      current = [];
-      currentHasVowel = false;
-    }
-
-    current.push(entry);
-    currentHasVowel = currentHasVowel || entry.isVowel;
+function getSyllablePhoneBases(entry) {
+  const sourceConsonants = getSourceBases(entry).filter(base => !ARPABET_VOWEL_BASES.has(base));
+  if (sourceConsonants.length > 0) {
+    return sourceConsonants;
   }
 
-  if (current.length > 0) {
-    syllables.push(current);
+  return IPA_TO_SYLLABLE_PHONE[entry.ipa] || [];
+}
+
+function isStressedCheckedNucleus(entry) {
+  if (entry.stress !== '1' && entry.stress !== '2') {
+    return false;
+  }
+
+  const sourceVowels = getSourceBases(entry).filter(base => ARPABET_VOWEL_BASES.has(base));
+  if (sourceVowels.length > 0) {
+    return sourceVowels.some(base => CHECKED_VOWEL_BASES.has(base));
+  }
+
+  return CHECKED_VOWEL_IPAS.has(entry.ipa);
+}
+
+function isLegalEnglishOnset(onsetEntries) {
+  const phoneBases = [];
+
+  for (const entry of onsetEntries) {
+    const entryPhones = getSyllablePhoneBases(entry);
+    if (entryPhones.length === 0) {
+      return false;
+    }
+
+    phoneBases.push(...entryPhones);
+  }
+
+  const onsetKey = phoneBases.join(' ');
+  return SINGLE_ONSET_BASES.has(onsetKey) || COMPLEX_ONSET_BASES.has(onsetKey);
+}
+
+function findMaximalOnsetStart(entries, clusterStart, clusterEnd, leftNucleus) {
+  if (clusterStart >= clusterEnd) {
+    return clusterEnd;
+  }
+
+  const needsCoda = isStressedCheckedNucleus(leftNucleus);
+
+  for (let onsetStart = clusterStart; onsetStart < clusterEnd; onsetStart += 1) {
+    if (needsCoda && onsetStart === clusterStart) {
+      continue;
+    }
+
+    if (isLegalEnglishOnset(entries.slice(onsetStart, clusterEnd))) {
+      return onsetStart;
+    }
+  }
+
+  return clusterEnd;
+}
+
+function syllabifyEntries(entries) {
+  const nuclei = entries.reduce((indices, entry, index) => {
+    if (entry.isVowel) {
+      indices.push(index);
+    }
+    return indices;
+  }, []);
+
+  if (nuclei.length <= 1) {
+    return entries.length ? [entries] : [];
+  }
+
+  const syllables = [];
+  let syllableStart = 0;
+
+  for (let i = 0; i < nuclei.length - 1; i += 1) {
+    const leftNucleusIndex = nuclei[i];
+    const rightNucleusIndex = nuclei[i + 1];
+    const clusterStart = leftNucleusIndex + 1;
+    const clusterEnd = rightNucleusIndex;
+    const boundary = findMaximalOnsetStart(entries, clusterStart, clusterEnd, entries[leftNucleusIndex]);
+
+    if (boundary > syllableStart) {
+      syllables.push(entries.slice(syllableStart, boundary));
+    }
+
+    syllableStart = boundary;
+  }
+
+  if (syllableStart < entries.length) {
+    syllables.push(entries.slice(syllableStart));
   }
 
   return syllables.length ? syllables : [entries];
@@ -268,16 +412,36 @@ function toBase64(url) {
     }));
 }
 
-function addMissingWordMessage(container, word) {
+function addMissingWordMessage(container, word, cleanedWord) {
+  const header = document.createElement('div');
+  header.className = 'word-header';
+
   const title = document.createElement('div');
   title.className = 'word-text';
   title.textContent = word;
-  container.appendChild(title);
+  header.appendChild(title);
 
   const failIcon = document.createElement('span');
-  failIcon.textContent = '❌';
+  failIcon.textContent = '!';
   failIcon.title = 'Phonemes not found';
   failIcon.className = 'error-span';
+
+  if (cleanedWord) {
+    const actions = document.createElement('div');
+    actions.className = 'word-actions';
+
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'icon-button';
+    editButton.textContent = '✎';
+    editButton.title = 'Create custom mapping';
+    editButton.setAttribute('aria-label', `Create custom mapping for ${cleanedWord}`);
+    editButton.addEventListener('click', () => openOverrideDialog(cleanedWord, []));
+    actions.appendChild(editButton);
+    header.appendChild(actions);
+  }
+
+  container.appendChild(header);
   container.appendChild(failIcon);
 }
 
@@ -438,8 +602,8 @@ async function convertText() {
       const container = document.createElement('div');
       container.className = 'word-container';
 
-      if (!pronunciation) {
-        addMissingWordMessage(container, word);
+      if (!hasWordMapping(cleaned, pronunciation)) {
+        addMissingWordMessage(container, word, cleaned);
         output.appendChild(container);
         continue;
       }
@@ -474,6 +638,11 @@ async function convertText() {
 function closeOverlay(overlayId) {
   const overlay = document.getElementById(overlayId);
   if (!overlay) return;
+
+  if (overlay.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+
   overlay.classList.remove('is-open');
   overlay.setAttribute('aria-hidden', 'true');
 }
